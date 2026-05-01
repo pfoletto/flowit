@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateFlow } from "./validator";
-import type { FlowEdge, FlowNode, FlowNodeKind } from "../types/flow";
+import type { FlowEdge, FlowEdgeLabel, FlowNode, FlowNodeKind } from "../types/flow";
 
 const node = (
   id: string,
@@ -13,11 +13,12 @@ const node = (
   data: { ...data, label: data.label ?? id },
 });
 
-const edge = (source: string, target: string): FlowEdge => ({
+const edge = (source: string, target: string, label: FlowEdgeLabel = "next"): FlowEdge => ({
   id: `${source}-${target}`,
   source,
   target,
-  data: { label: "next" },
+  label: label === "next" ? undefined : label,
+  data: { label },
 });
 
 const validLinearFlow = () => {
@@ -122,6 +123,88 @@ describe("validateFlow", () => {
     const nextNodes = nodes.map((item) => (item.id === "output" ? { ...item, data: { label: "Output" } } : item));
 
     expect(validateFlow(nextNodes, edges).some((issue) => issue.message.includes("output"))).toBe(true);
+  });
+
+  it("accepts an input node with a variable", () => {
+    const nodes = [
+      node("start", "start", { label: "Start" }),
+      node("input", "input", { label: "Input", variable: "name", prompt: "Name?" }),
+      node("end", "end", { label: "End" }),
+    ];
+
+    expect(validateFlow(nodes, [edge("start", "input"), edge("input", "end")])).toEqual([]);
+  });
+
+  it("reports an input without variable", () => {
+    const nodes = [
+      node("start", "start", { label: "Start" }),
+      node("input", "input", { label: "Input", prompt: "Name?" }),
+      node("end", "end", { label: "End" }),
+    ];
+
+    expect(validateFlow(nodes, [edge("start", "input"), edge("input", "end")]).some((issue) => issue.message.includes("variabile di input"))).toBe(true);
+  });
+
+  it("accepts an If node with true and false branches", () => {
+    const nodes = [
+      node("start", "start", { label: "Start" }),
+      node("if", "if", { label: "If", expression: "x > 0" }),
+      node("true-output", "output", { label: "True", expression: '"positive"' }),
+      node("false-output", "output", { label: "False", expression: '"other"' }),
+      node("end", "end", { label: "End" }),
+    ];
+    const edges = [
+      edge("start", "if"),
+      edge("if", "true-output", "true"),
+      edge("if", "false-output", "false"),
+      edge("true-output", "end"),
+      edge("false-output", "end"),
+    ];
+
+    expect(validateFlow(nodes, edges)).toEqual([]);
+  });
+
+  it("reports an If node without condition", () => {
+    const nodes = [
+      node("start", "start", { label: "Start" }),
+      node("if", "if", { label: "If" }),
+      node("true-output", "output", { label: "True", expression: '"positive"' }),
+      node("false-output", "output", { label: "False", expression: '"other"' }),
+      node("end", "end", { label: "End" }),
+    ];
+    const edges = [
+      edge("start", "if"),
+      edge("if", "true-output", "true"),
+      edge("if", "false-output", "false"),
+      edge("true-output", "end"),
+      edge("false-output", "end"),
+    ];
+
+    expect(validateFlow(nodes, edges).some((issue) => issue.message.includes("condizione"))).toBe(true);
+  });
+
+  it("reports an If node without true branch", () => {
+    const nodes = [
+      node("start", "start", { label: "Start" }),
+      node("if", "if", { label: "If", expression: "x > 0" }),
+      node("false-output", "output", { label: "False", expression: '"other"' }),
+      node("end", "end", { label: "End" }),
+    ];
+    const edges = [edge("start", "if"), edge("if", "false-output", "false"), edge("false-output", "end")];
+
+    expect(validateFlow(nodes, edges).some((issue) => issue.message.includes("uscita true"))).toBe(true);
+  });
+
+  it("reports an If node without false branch", () => {
+    const nodes = [
+      node("start", "start", { label: "Start" }),
+      node("if", "if", { label: "If", expression: "x > 0" }),
+      node("true-output", "output", { label: "True", expression: '"positive"' }),
+      node("end", "end", { label: "End" }),
+    ];
+    const edges = [edge("start", "if"), edge("if", "true-output", "true"), edge("true-output", "end")];
+
+    expect(validateFlow(nodes, edges).some((issue) => issue.message.includes("uscita false"))).toBe(true);
   });
 
   it("reports an unreachable node", () => {

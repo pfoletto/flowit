@@ -4,6 +4,7 @@ const nodeLabel = (node: FlowNode) => `"${node.data.label || node.id}"`;
 
 const getOutgoingEdges = (node: FlowNode, edges: FlowEdge[]) => edges.filter((edge) => edge.source === node.id);
 const getIncomingEdges = (node: FlowNode, edges: FlowEdge[]) => edges.filter((edge) => edge.target === node.id);
+const getEdgeLabel = (edge: FlowEdge) => edge.data?.label ?? edge.label;
 
 export const validateFlow = (nodes: FlowNode[], edges: FlowEdge[]): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
@@ -55,8 +56,8 @@ export const validateFlow = (nodes: FlowNode[], edges: FlowEdge[]): ValidationIs
       issues.push({ nodeId: node.id, message: `${nodeLabel(node)} deve avere un collegamento in uscita.` });
     }
 
-    if (node.type !== "end" && outgoingEdges.length > 1) {
-      issues.push({ nodeId: node.id, message: `${nodeLabel(node)} ha piu' di un collegamento in uscita nel runtime lineare MVP.` });
+    if (node.type !== "end" && node.type !== "if" && outgoingEdges.length > 1) {
+      issues.push({ nodeId: node.id, message: `${nodeLabel(node)} ha piu' di un collegamento in uscita nel runtime MVP.` });
     }
 
     if (node.type === "assign") {
@@ -69,8 +70,33 @@ export const validateFlow = (nodes: FlowNode[], edges: FlowEdge[]): ValidationIs
       }
     }
 
+    if (node.type === "input" && !node.data.variable?.trim()) {
+      issues.push({ nodeId: node.id, message: `${nodeLabel(node)} richiede una variabile di input.` });
+    }
+
     if (node.type === "output" && !node.data.expression?.trim()) {
       issues.push({ nodeId: node.id, message: `${nodeLabel(node)} richiede un'espressione di output.` });
+    }
+
+    if (node.type === "if") {
+      const hasTrueEdge = outgoingEdges.some((edge) => getEdgeLabel(edge) === "true");
+      const hasFalseEdge = outgoingEdges.some((edge) => getEdgeLabel(edge) === "false");
+
+      if (!node.data.expression?.trim()) {
+        issues.push({ nodeId: node.id, message: `${nodeLabel(node)} richiede una condizione.` });
+      }
+
+      if (outgoingEdges.length !== 2) {
+        issues.push({ nodeId: node.id, message: `${nodeLabel(node)} deve avere esattamente due uscite: true e false.` });
+      }
+
+      if (!hasTrueEdge) {
+        issues.push({ nodeId: node.id, message: `${nodeLabel(node)} richiede un'uscita true.` });
+      }
+
+      if (!hasFalseEdge) {
+        issues.push({ nodeId: node.id, message: `${nodeLabel(node)} richiede un'uscita false.` });
+      }
     }
   });
 

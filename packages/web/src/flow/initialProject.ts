@@ -12,20 +12,27 @@ export const createInitialProject = (): FlowProject => ({
       data: { label: "Start" },
     },
     {
+      id: "input-1",
+      type: "input",
+      position: { x: 120, y: 260 },
+      data: { label: "Input", variable: "nome", prompt: "Inserisci il tuo nome" },
+    },
+    {
       id: "output-1",
       type: "output",
-      position: { x: 120, y: 260 },
-      data: { label: "Output", expression: '"Ciao Flowit"' },
+      position: { x: 120, y: 400 },
+      data: { label: "Output", expression: "nome" },
     },
     {
       id: "end",
       type: "end",
-      position: { x: 120, y: 400 },
+      position: { x: 120, y: 540 },
       data: { label: "End" },
     },
   ],
   edges: [
-    { id: "start-output-1", source: "start", target: "output-1", data: { label: "next" } },
+    { id: "start-input-1", source: "start", target: "input-1", data: { label: "next" } },
+    { id: "input-1-output-1", source: "input-1", target: "output-1", data: { label: "next" } },
     { id: "output-1-end", source: "output-1", target: "end", data: { label: "next" } },
   ],
 });

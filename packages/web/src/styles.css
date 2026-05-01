@@ -112,7 +112,7 @@ button:hover {
   border-top: 1px solid #dfe6ee;
   display: grid;
   gap: 16px;
-  grid-template-columns: 160px 1fr 1fr 1fr;
+  grid-template-columns: 150px minmax(180px, 0.85fr) 1fr 1fr 1fr;
   overflow: auto;
   padding: 14px;
 }
@@ -125,6 +125,34 @@ button:hover {
 
 .runtime-section {
   min-width: 0;
+}
+
+.runtime-section--input p {
+  color: #6b7785;
+  margin: 0;
+}
+
+.runtime-input-form {
+  display: grid;
+  gap: 8px;
+}
+
+.runtime-input-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.runtime-input-form span {
+  color: #52606d;
+  font-size: 13px;
+}
+
+.runtime-input-form input {
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  width: 100%;
 }
 
 .runtime-section h2,
@@ -186,8 +214,10 @@ button:hover {
 
 .flow-node {
   align-items: center;
-  background: #ffffff;
-  border: 2px solid #8ca3b8;
+  --flow-node-bg: #ffffff;
+  --flow-node-border: #8ca3b8;
+  background: var(--flow-node-bg);
+  border: 2px solid var(--flow-node-border);
   border-radius: 8px;
   box-shadow: 0 10px 22px rgba(30, 41, 59, 0.08);
   display: grid;
@@ -195,6 +225,12 @@ button:hover {
   justify-items: center;
   min-width: 140px;
   padding: 14px 18px;
+}
+
+.flow-node-content {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
 }
 
 .flow-node strong {
@@ -209,36 +245,131 @@ button:hover {
 
 .flow-node--terminal {
   border-radius: 999px;
-  border-color: #3f8f72;
+  --flow-node-border: #3f8f72;
 }
 
 .flow-node--process {
-  border-color: #3778c2;
+  --flow-node-border: #3778c2;
 }
 
-.flow-node--output {
-  border-color: #9b5de5;
+.flow-node--io {
+  --flow-node-border: #9b5de5;
+  border-radius: 4px;
+  min-width: 164px;
+  padding-left: 28px;
+  padding-right: 28px;
+  transform: skew(-14deg);
+}
+
+.flow-node--io .flow-node-content {
+  transform: skew(14deg);
+}
+
+.flow-node--decision {
+  --flow-node-bg: #ffffff;
+  --flow-node-border: #d97706;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 112px;
+  min-width: 188px;
+  overflow: visible;
+  padding: 24px 44px;
+  position: relative;
+  isolation: isolate;
+}
+
+.flow-node--decision::before,
+.flow-node--decision::after {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  content: "";
+  position: absolute;
+}
+
+.flow-node--decision::before {
+  background: var(--flow-node-border);
+  inset: 0;
+  z-index: 0;
+}
+
+.flow-node--decision::after {
+  background: var(--flow-node-bg);
+  inset: 3px;
+  z-index: 1;
+}
+
+.flow-node--decision .flow-node-content {
+  max-width: 92px;
+  position: relative;
+  z-index: 2;
+}
+
+.flow-node--decision .react-flow__handle {
+  z-index: 3;
 }
 
 .flow-node--selected {
-  outline: 3px solid rgba(55, 120, 194, 0.22);
+  box-shadow: 0 0 0 4px rgba(55, 120, 194, 0.22), 0 10px 22px rgba(30, 41, 59, 0.08);
+}
+
+.flow-node--io.flow-node--selected {
+  outline: none;
+}
+
+.flow-node--decision.flow-node--selected {
+  box-shadow: none;
 }
 
 .flow-node--visited {
-  background: #ecfdf5;
-  border-color: #10b981;
+  --flow-node-bg: #ecfdf5;
+  --flow-node-border: #10b981;
 }
 
 .flow-node--current {
-  background: #fff7ed;
-  border-color: #f97316;
+  --flow-node-bg: #fff7ed;
+  --flow-node-border: #f97316;
   box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.16), 0 10px 22px rgba(30, 41, 59, 0.08);
 }
 
 .flow-node--invalid {
-  background: #fff1f2;
-  border-color: #e11d48;
+  --flow-node-bg: #fff1f2;
+  --flow-node-border: #e11d48;
   box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12), 0 10px 22px rgba(30, 41, 59, 0.08);
+}
+
+.react-flow__node,
+.react-flow__node:focus,
+.react-flow__node:focus-visible,
+.react-flow__node.selected {
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.react-flow__node-input,
+.react-flow__node-output {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.react-flow__node-input.selectable:hover,
+.react-flow__node-output.selectable:hover,
+.react-flow__node-input.selectable.selected,
+.react-flow__node-output.selectable.selected,
+.react-flow__node-input.selectable:focus,
+.react-flow__node-output.selectable:focus,
+.react-flow__node-input.selectable:focus-visible,
+.react-flow__node-output.selectable:focus-visible {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 @media (max-width: 900px) {

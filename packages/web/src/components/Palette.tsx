@@ -1,12 +1,14 @@
 import { ChangeEvent, useRef } from "react";
-import { Circle, Diamond, Download, FolderOpen, Play, Plus, Save, Upload } from "lucide-react";
+import { Circle, Diamond, Download, FolderOpen, GitBranch, Keyboard, Play, Plus, Save, Upload } from "lucide-react";
 import { useFlowStore } from "../store/flowStore";
 import type { FlowNodeKind, FlowProject } from "../types/flow";
 
 const blockButtons: Array<{ kind: FlowNodeKind; label: string; icon: typeof Circle }> = [
   { kind: "start", label: "Start", icon: Play },
+  { kind: "input", label: "Input", icon: Keyboard },
   { kind: "assign", label: "Assignment", icon: Plus },
   { kind: "output", label: "Output", icon: Diamond },
+  { kind: "if", label: "If", icon: GitBranch },
   { kind: "end", label: "End", icon: Circle },
 ];
 

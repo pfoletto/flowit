@@ -28,7 +28,7 @@ export const PropertiesPanel = () => {
         />
       </label>
 
-      {selectedNode.type === "assign" && (
+      {(selectedNode.type === "assign" || selectedNode.type === "input") && (
         <label>
           <span>Variabile</span>
           <input
@@ -38,9 +38,19 @@ export const PropertiesPanel = () => {
         </label>
       )}
 
-      {(selectedNode.type === "assign" || selectedNode.type === "output") && (
+      {selectedNode.type === "input" && (
         <label>
-          <span>Espressione</span>
+          <span>Prompt</span>
+          <input
+            value={selectedNode.data.prompt ?? ""}
+            onChange={(event) => updateSelectedNode({ prompt: event.target.value })}
+          />
+        </label>
+      )}
+
+      {(selectedNode.type === "assign" || selectedNode.type === "output" || selectedNode.type === "if") && (
+        <label>
+          <span>{selectedNode.type === "if" ? "Condizione" : "Espressione"}</span>
           <input
             value={selectedNode.data.expression ?? ""}
             onChange={(event) => updateSelectedNode({ expression: event.target.value })}

@@ -9,7 +9,7 @@ import {
 import { create } from "zustand";
 import { createInitialProject } from "../flow/initialProject";
 import { getInvalidNodeIds, validateFlow } from "../flow/validator";
-import { runLinearFlow } from "../runtime/interpreter";
+import { continueLinearFlow, continueStepFlow, runLinearFlow, stepLinearFlow } from "../runtime/interpreter";
 import type { FlowEdge, FlowNode, FlowNodeKind, FlowProject, RuntimeState } from "../types/flow";
 
 type FlowStore = {
@@ -24,6 +24,8 @@ type FlowStore = {
   selectNode: (nodeId: string | null) => void;
   updateSelectedNode: (data: Partial<FlowNode["data"]>) => void;
   runProject: () => void;
+  stepProject: () => void;
+  submitRuntimeInput: (value: string) => void;
   resetRuntime: () => void;
   newProject: () => void;
   saveProject: () => void;
@@ -37,8 +39,10 @@ const storageKey = "flowit.project.v1";
 
 const createRuntime = (): RuntimeState => ({
   currentNodeId: null,
+  executionMode: "idle",
   visitedNodeIds: [],
   invalidNodeIds: [],
+  pendingInput: null,
   variables: {},
   output: [],
   errors: [],
@@ -48,9 +52,13 @@ const createRuntime = (): RuntimeState => ({
 const nodeDefaults: Record<FlowNodeKind, FlowNode["data"]> = {
   start: { label: "Start" },
   end: { label: "End" },
+  input: { label: "Input", variable: "x", prompt: "Inserisci un valore" },
   assign: { label: "Assignment", variable: "x", expression: "1" },
   output: { label: "Output", expression: "x" },
+  if: { label: "If", expression: "x > 0" },
 };
+
+const createId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
 export const useFlowStore = create<FlowStore>((set, get) => ({
   project: createInitialProject(),
@@ -85,13 +93,96 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     set((state) => ({
       project: {
         ...state.project,
-        edges: addEdge({ ...connection, data: { label: "next" } }, state.project.edges),
+        edges: addEdge(
+          {
+            ...connection,
+            label: connection.sourceHandle === "true" ? "true" : connection.sourceHandle === "false" ? "false" : undefined,
+            data: {
+              label: connection.sourceHandle === "true" ? "true" : connection.sourceHandle === "false" ? "false" : "next",
+            },
+          },
+          state.project.edges,
+        ),
       },
     })),
 
   addNode: (kind) =>
     set((state) => {
-      const id = `${kind}-${crypto.randomUUID().slice(0, 8)}`;
+      if (kind === "if") {
+        const ifId = createId("if");
+        const trueOutputId = createId("output-true");
+        const falseOutputId = createId("output-false");
+        const endId = createId("end-if");
+        const baseX = 260 + state.project.nodes.length * 18;
+        const baseY = 160 + state.project.nodes.length * 18;
+        const nextNodes: FlowNode[] = [
+          {
+            id: ifId,
+            type: "if",
+            position: { x: baseX, y: baseY },
+            data: { ...nodeDefaults.if },
+          },
+          {
+            id: trueOutputId,
+            type: "output",
+            position: { x: baseX + 260, y: baseY + 180 },
+            data: { label: "Output true", expression: '"ramo true"' },
+          },
+          {
+            id: falseOutputId,
+            type: "output",
+            position: { x: baseX - 260, y: baseY + 180 },
+            data: { label: "Output false", expression: '"ramo false"' },
+          },
+          {
+            id: endId,
+            type: "end",
+            position: { x: baseX, y: baseY + 360 },
+            data: { label: "End" },
+          },
+        ];
+        const nextEdges: FlowEdge[] = [
+          {
+            id: `${ifId}-${trueOutputId}`,
+            source: ifId,
+            sourceHandle: "true",
+            target: trueOutputId,
+            label: "true",
+            data: { label: "true" },
+          },
+          {
+            id: `${ifId}-${falseOutputId}`,
+            source: ifId,
+            sourceHandle: "false",
+            target: falseOutputId,
+            label: "false",
+            data: { label: "false" },
+          },
+          {
+            id: `${trueOutputId}-${endId}`,
+            source: trueOutputId,
+            target: endId,
+            data: { label: "next" },
+          },
+          {
+            id: `${falseOutputId}-${endId}`,
+            source: falseOutputId,
+            target: endId,
+            data: { label: "next" },
+          },
+        ];
+
+        return {
+          project: {
+            ...state.project,
+            nodes: [...state.project.nodes, ...nextNodes],
+            edges: [...state.project.edges, ...nextEdges],
+          },
+          selectedNodeId: ifId,
+        };
+      }
+
+      const id = createId(kind);
       const nextNode: FlowNode = {
         id,
         type: kind,
@@ -136,6 +227,36 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
 
     set({ runtime: runLinearFlow(nodes, edges) });
+  },
+
+  stepProject: () => {
+    const { nodes, edges } = get().project;
+    const validationIssues = validateFlow(nodes, edges);
+
+    if (validationIssues.length > 0) {
+      set({
+        runtime: {
+          ...createRuntime(),
+          invalidNodeIds: getInvalidNodeIds(validationIssues),
+          errors: validationIssues.map((issue) => issue.message),
+        },
+      });
+      return;
+    }
+
+    set({ runtime: stepLinearFlow(nodes, edges, get().runtime) });
+  },
+
+  submitRuntimeInput: (value) => {
+    const { nodes, edges } = get().project;
+    const runtime = get().runtime;
+
+    set({
+      runtime:
+        runtime.executionMode === "step"
+          ? continueStepFlow(nodes, edges, runtime, value)
+          : continueLinearFlow(nodes, edges, runtime, value),
+    });
   },
 
   resetRuntime: () => set({ runtime: createRuntime() }),
