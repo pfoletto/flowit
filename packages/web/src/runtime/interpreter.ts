@@ -8,11 +8,15 @@ const evaluateExpression = (expression: string, variables: RuntimeState["variabl
 
 const initialRuntime = (): RuntimeState => ({
   currentNodeId: null,
+  visitedNodeIds: [],
+  invalidNodeIds: [],
   variables: {},
   output: [],
   errors: [],
   isRunning: false,
 });
+
+const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export const runLinearFlow = (nodes: FlowNode[], edges: FlowEdge[]): RuntimeState => {
   const runtime = initialRuntime();
@@ -29,6 +33,7 @@ export const runLinearFlow = (nodes: FlowNode[], edges: FlowEdge[]): RuntimeStat
 
   while (current) {
     runtime.currentNodeId = current.id;
+    runtime.visitedNodeIds.push(current.id);
     stepCount += 1;
 
     if (stepCount > 500) {
@@ -54,7 +59,13 @@ export const runLinearFlow = (nodes: FlowNode[], edges: FlowEdge[]): RuntimeStat
         break;
       }
 
-      runtime.variables[variable] = evaluateExpression(expression, runtime.variables);
+      try {
+        runtime.variables[variable] = evaluateExpression(expression, runtime.variables);
+      } catch (error) {
+        runtime.invalidNodeIds.push(current.id);
+        runtime.errors.push(`Errore in ${current.data.label}: ${getErrorMessage(error)}.`);
+        break;
+      }
     }
 
     if (current.type === "output") {
@@ -65,13 +76,20 @@ export const runLinearFlow = (nodes: FlowNode[], edges: FlowEdge[]): RuntimeStat
         break;
       }
 
-      runtime.output.push(String(evaluateExpression(expression, runtime.variables)));
+      try {
+        runtime.output.push(String(evaluateExpression(expression, runtime.variables)));
+      } catch (error) {
+        runtime.invalidNodeIds.push(current.id);
+        runtime.errors.push(`Errore in ${current.data.label}: ${getErrorMessage(error)}.`);
+        break;
+      }
     }
 
     const nextEdge = edges.find((edge) => edge.source === current?.id);
 
     if (!nextEdge) {
       runtime.errors.push(`Il blocco "${current.data.label}" non ha un collegamento in uscita.`);
+      runtime.invalidNodeIds.push(current.id);
       break;
     }
 
@@ -79,6 +97,7 @@ export const runLinearFlow = (nodes: FlowNode[], edges: FlowEdge[]): RuntimeStat
 
     if (!current) {
       runtime.errors.push(`Collegamento verso nodo inesistente: ${nextEdge.target}.`);
+      runtime.invalidNodeIds.push(nextEdge.target);
       break;
     }
   }

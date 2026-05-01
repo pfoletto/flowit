@@ -7,6 +7,7 @@
     "dev": "pnpm --filter @flowit/web dev",
     "build": "pnpm --filter @flowit/web build",
     "preview": "pnpm --filter @flowit/web preview",
+    "test": "pnpm --filter @flowit/web test",
     "typecheck": "pnpm --filter @flowit/web typecheck"
   },
   "devDependencies": {

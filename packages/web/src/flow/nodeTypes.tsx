@@ -13,7 +13,7 @@ const FlowNodeView = ({ data, type, selected }: NodeProps<FlowNode>) => {
   const hasOutput = type !== "end";
 
   return (
-    <div className={`${nodeClassByType[type]} ${selected ? "flow-node--selected" : ""}`}>
+    <div className={`${nodeClassByType[type]} ${selected ? "flow-node--selected" : ""} ${data.status ? `flow-node--${data.status}` : ""}`}>
       {hasInput && <Handle type="target" position={Position.Top} />}
       <strong>{data.label}</strong>
       {data.variable && <span>{data.variable}</span>}

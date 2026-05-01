@@ -6,6 +6,7 @@ export type FlowNodeData = {
   label: string;
   variable?: string;
   expression?: string;
+  status?: "current" | "visited" | "invalid";
 };
 
 export type FlowNode = Node<FlowNodeData, FlowNodeKind>;
@@ -21,8 +22,15 @@ export type FlowProject = {
 
 export type RuntimeState = {
   currentNodeId: string | null;
+  visitedNodeIds: string[];
+  invalidNodeIds: string[];
   variables: Record<string, number | string | boolean>;
   output: string[];
   errors: string[];
   isRunning: boolean;
+};
+
+export type ValidationIssue = {
+  nodeId?: string;
+  message: string;
 };

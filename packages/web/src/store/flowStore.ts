@@ -8,6 +8,7 @@ import {
 } from "@xyflow/react";
 import { create } from "zustand";
 import { createInitialProject } from "../flow/initialProject";
+import { getInvalidNodeIds, validateFlow } from "../flow/validator";
 import { runLinearFlow } from "../runtime/interpreter";
 import type { FlowEdge, FlowNode, FlowNodeKind, FlowProject, RuntimeState } from "../types/flow";
 
@@ -15,6 +16,7 @@ type FlowStore = {
   project: FlowProject;
   selectedNodeId: string | null;
   runtime: RuntimeState;
+  updateProjectName: (name: string) => void;
   onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<FlowEdge>[]) => void;
   onConnect: (connection: Connection) => void;
@@ -26,12 +28,17 @@ type FlowStore = {
   newProject: () => void;
   saveProject: () => void;
   loadProject: () => void;
+  exportProject: () => void;
+  importProject: (project: FlowProject) => void;
+  setRuntimeErrors: (errors: string[]) => void;
 };
 
 const storageKey = "flowit.project.v1";
 
 const createRuntime = (): RuntimeState => ({
   currentNodeId: null,
+  visitedNodeIds: [],
+  invalidNodeIds: [],
   variables: {},
   output: [],
   errors: [],
@@ -49,6 +56,14 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   project: createInitialProject(),
   selectedNodeId: null,
   runtime: createRuntime(),
+
+  updateProjectName: (name) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        name,
+      },
+    })),
 
   onNodesChange: (changes) =>
     set((state) => ({
@@ -107,6 +122,19 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
 
   runProject: () => {
     const { nodes, edges } = get().project;
+    const validationIssues = validateFlow(nodes, edges);
+
+    if (validationIssues.length > 0) {
+      set({
+        runtime: {
+          ...createRuntime(),
+          invalidNodeIds: getInvalidNodeIds(validationIssues),
+          errors: validationIssues.map((issue) => issue.message),
+        },
+      });
+      return;
+    }
+
     set({ runtime: runLinearFlow(nodes, edges) });
   },
 
@@ -125,5 +153,25 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
 
     set({ project: JSON.parse(storedProject) as FlowProject, selectedNodeId: null, runtime: createRuntime() });
+  },
+
+  exportProject: () => {
+    const project = get().project;
+    const file = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${project.name.toLowerCase().replace(/\s+/g, "-")}.flowit.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+
+  importProject: (project) => {
+    set({ project, selectedNodeId: null, runtime: createRuntime() });
+  },
+
+  setRuntimeErrors: (errors) => {
+    set({ runtime: { ...createRuntime(), errors } });
   },
 }));

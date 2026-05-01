@@ -64,7 +64,28 @@ button:hover {
 .brand {
   font-size: 20px;
   font-weight: 800;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
+}
+
+.project-name {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.project-name span {
+  color: #52606d;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.project-name input {
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  width: 100%;
 }
 
 .tool-group {
@@ -159,6 +180,10 @@ button:hover {
   line-height: 1.5;
 }
 
+.file-input {
+  display: none;
+}
+
 .flow-node {
   align-items: center;
   background: #ffffff;
@@ -197,6 +222,23 @@ button:hover {
 
 .flow-node--selected {
   outline: 3px solid rgba(55, 120, 194, 0.22);
+}
+
+.flow-node--visited {
+  background: #ecfdf5;
+  border-color: #10b981;
+}
+
+.flow-node--current {
+  background: #fff7ed;
+  border-color: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.16), 0 10px 22px rgba(30, 41, 59, 0.08);
+}
+
+.flow-node--invalid {
+  background: #fff1f2;
+  border-color: #e11d48;
+  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12), 0 10px 22px rgba(30, 41, 59, 0.08);
 }
 
 @media (max-width: 900px) {
